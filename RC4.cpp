@@ -11,7 +11,7 @@ void generateRandomKey(int Key[128]){
     }
 }
 
-void probabilityOfSecondZero(const int Key[128], int S[256], int T[256], int generationsNo){
+void probabilityOfSecondZero( int Key[128], int S[256], int T[256], int generationsNo){
     // Function to calculate the probability of the second byte being zero in a sequence
     // Initialize S and T arrays
     for (int i = 0; i < 256; i++) {
@@ -53,7 +53,7 @@ void probabilityOfSecondZero(const int Key[128], int S[256], int T[256], int gen
     // We divide the number of having second byte equal to 0 on the number of generated keys.
 }
 
-void probabilityOfTwoZeros(const int Key[128], int S[256], int T[256], int generationsNo){
+void probabilityOfTwoZeros( int Key[128], int S[256], int T[256], int generationsNo){
     // generationsNo: the number of bytes to be generated
     // Initialize the S and T arrays with values from the provided 'Key' and sequence numbers
     for (int i = 0; i < 256; i++) {
@@ -98,93 +98,85 @@ void probabilityOfTwoZeros(const int Key[128], int S[256], int T[256], int gener
          << probability << endl;
 }
 
-int hammingDistance(const int Key1[128], const int Key2[128]){
+// RC4 Key-Scheduling Algorithm
+void KSA(unsigned char S[256], const string& key) {
+    // The 'S' array in RC4 is represented as 'unsigned char' for memory efficiency,
+    // as it only needs to store values in the range [0, 255]. Using 'unsigned char'
+    // conserves memory compared to using 'int' and is more suitable for bitwise operations.
 
-    // Hamming Distance is calculated between two outputs by XORing each bit in the first string with the
-    // corresponding bit in the second string and then summing all the ones
 
-    // but we can have the same result if we comparing the equality between the corresponding bit in the keys
-
-
-    // Calculate the Hamming distance between two 128-bit keys, 'Key1' and 'Key2'.
-    int distance = 0; // Initialize the distance to zero.
-
-    for (int i = 0; i < 128; i++){
-        // Iterate through each bit of the 128-bit keys.
-
-        distance += (Key1[i] != Key2[i]);
-        // If the corresponding bits of 'Key1' and 'Key2' are different, increment the 'distance'.
-        // This operation counts the number of differing bits between the keys.
-    }
-
-    return distance; // Return the calculated Hamming distance.
-}
-
-void generateBytes(int Key[], int generationsNo, int generatedBytes[]){
-    // generationsNo :  the number of generation bytes
-    // Generate pseudo-random bytes using the RC4 algorithm with the provided 'Key'.
-
-    int S[256], T[256];
-    // Initialize two arrays, 'S' and 'T', which are crucial for the RC4 algorithm.
-
+    // Initialize the S array with values from 0 to 255
     for (int i = 0; i < 256; i++) {
-        // Initialize arrays 'S' and 'T' based on the provided 'Key'.
-        S[i] = i;               // Initialize 'S' with sequential values [0, 255].
-        T[i] = Key[i % 128];    // Initialize 'T' by repeating the 'Key' cyclically.
+        S[i] = static_cast<unsigned char>(i);
     }
 
-    int i = 0, j = 0, t;
-    for (int n = 0; n < generationsNo; n++){
-        // Loop 'generationsNo' times to generate pseudo-random bytes.
-
-        i = (i + 1) % 256;
-        // Update variable 'i' by incrementing it and ensuring it wraps around within the range [0, 255].
-
-        j = (j + S[i]) % 256;
-        // Update variable 'j' using the value from the 'S' array and wrapping it within [0, 255].
-
+    int j = 0;
+    // Iterate over the entire S array to shuffle its elements based on the provided key
+    for (int i = 0; i < 256; i++) {
+        // Calculate a new value for 'j' by adding the current 'j', the value of 'S[i]', and a key element.
+        // 'key[i % key.length()] - '0'' converts a character digit to its integer value (0 or 1).
+        j = (j + S[i] + key[i % key.length()] - '0') % 256;
         swap(S[i], S[j]);
-        t = (S[i] + S[j]) % 256;
-        // Calculate variable 't' by adding 'S[i]' and 'S[j]' and wrapping it within [0, 255].
-
-        generatedBytes[n] = S[t];
-        // Store the generated pseudo-random byte 'S[t]' in the 'generatedBytes' array.
     }
 }
 
-void relatedKeyAttacks(int Key[128]){
-    // Simulate a related key attack on the RC4 algorithm with the provided 'Key'.
+// Calculate the Hamming distance between two binary strings of bytes.
+// The Hamming distance is the count of differing bits between the two strings.
+// It's calculated by XORing each bit in the first string with the corresponding bit in the second string
+// and then summing all the differing bits. Finally, the result is divided by the string length.
+int HammingDistance(const unsigned char str1[], const unsigned char str2[], int length) {
+    int differingBits = 0;  // Initialize a counter to keep track of differing bits.
 
-    int Key2[128];
-    // Create a second key, 'Key2,' to perform a related key attack.
-
-    for (int i = 0; i < 128; i++){
-        // Copy the values from 'Key' to 'Key2.'
-        Key2[i] = Key[i];
+    // Iterate through the bytes of the strings
+    for (int i = 0; i < length; i++) {
+        // Iterate through the bits (8 bits in a byte)
+        for (int bit = 0; bit < 8; bit++) {
+            // Extract the corresponding bit from each string and compare them.
+            if (((str1[i] >> bit) & 1) != ((str2[i] >> bit) & 1)) {
+                differingBits++;  // Increment the differing bits count when a difference is found.
+            }
+        }
     }
 
-    int randomIndex = rand() % 128;
-    // Generate a random index within the range [0, 127] to select a bit to flip in 'Key2.'
+    return differingBits;  // Return the Hamming distance as the count of differing bits.
+}
 
-    Key2[randomIndex] = 1 - Key2[randomIndex];
-    // Perform a related key attack by flipping the bit at the randomly selected index in 'Key2.'
+// This function demonstrates a related key attack on the RC4 encryption algorithm.
+// It generates two related 128-bit keys, where the second key differs from the first
+// by flipping a single random bit. It then initializes two RC4 internal states using
+// the key-scheduling algorithm (KSA) for each of the two keys. Finally, it calculates
+// the Hamming distance between the two internal states to measure their difference.
+void relatedKeyAttack() {
+    const int keyLength = 128;
+    unsigned char key1[keyLength];
+    unsigned char key2[keyLength];
 
-    int size = 10000;
-    int generatedBytes1[size], generatedBytes2[size];
-    // Initialize arrays to store the generated bytes with the original 'Key' and 'Key2.'
-    // We want to generate 10000 byte for each key
+    // Generate a random 128-bit key for key1
+    for (int i = 0; i < keyLength; i++) {
+        key1[i] = rand() % 2;
+    }
 
-    generateBytes(Key, size, generatedBytes1);
-    // Generate pseudo-random bytes using the original 'Key' and store them in 'generatedBytes1.'
+    // Initialize key2 as a copy of key1
+    for (int i = 0; i < keyLength; i++) {
+        key2[i] = key1[i];
+    }
 
-    generateBytes(Key2, size, generatedBytes2);
-    // Generate pseudo-random bytes using 'Key2' (related key) and store them in 'generatedBytes2.'
+    // Flip a random bit in key2
+    int randomIndex = rand() % keyLength;
+    key2[randomIndex] = 1 - key2[randomIndex];
 
-    int distance = hammingDistance(generatedBytes1, generatedBytes2);
-    // Calculate the Hamming distance between the generated bytes using the two keys.
+    unsigned char S1[256];
+    unsigned char S2[256];
 
-    cout << "Hamming Distance between two random keys: " << distance / (size*1.0) << endl << endl;
-    // Output the normalized Hamming distance, which represents the difference between the two key sequences.
+    // Call the KSA function to initialize S1 and S2 using the key and key2
+    KSA(S1, string(key1, key1 + keyLength));
+    KSA(S2, string(key2, key2 + keyLength));
+
+    // Calculate the Hamming distance between the two RC4 internal states
+    int differingBits = HammingDistance(S1, S2, 256);
+
+    cout << "Hamming Distance between two related keys: " << differingBits << endl;
+    cout << "Percentage Difference: " << static_cast<double>(differingBits) / (256 * 8) * 100 << "%" << endl << endl;
 }
 
 int main(){
@@ -238,11 +230,10 @@ int main(){
 
             cout << "Third test:" << endl ;
             // Third test: Related key attacks and Hamming distance.
-            relatedKeyAttacks(Key);
+            relatedKeyAttack();
             // Create new key that it's values are the same as the original one, then choose random bit of the 
             // the second key to flib it so the different between them is 1 bit.
-            // Then generate 10000 byte from each key, and calculating the hamming distance for them
-            break;
+            // Then generate and initialize RC4 internal states for each key, and calculate the Hamming distance between them.            break;
         case 4:
             cout << "Goodbye!" << endl;
             break;
